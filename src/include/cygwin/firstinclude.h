@@ -9,7 +9,9 @@
 #ifndef FIRSTINCLUDE_H
 #define FIRSTINCLUDE_H
 
+#ifndef _FILE_OFFSET_BITS
 #define _FILE_OFFSET_BITS 64           /* large file support */
+#endif
 #define _BSD_SOURCE                    /* for snprintf */
 #define _POSIX_SOURCE                  /* for lots of stuff */
 #define _POSIX_C_SOURCE 199309L
@@ -20,7 +22,6 @@
 
 #include <unistd.h>
 #include <sys/types.h>
-#include <math.h>
 
 #include "config.h"
 

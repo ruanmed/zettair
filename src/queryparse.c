@@ -9,6 +9,8 @@
  *
  */
 
+#include "firstinclude.h"
+
 #include "queryparse.h"
 
 #include "ascii.h"

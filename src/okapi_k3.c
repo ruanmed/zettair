@@ -1,27 +1,24 @@
-/* cosine.c implements the cosine metric for the zettair query
+/* okapi_k3.c implements the okapi_k3 metric for the zettair query
  * subsystem.  This file was automatically generated from
- * src/cosine.metric and src/metric.c
- * by scripts/metric.py on Thu, 29 Jun 2006 04:12:41 GMT.  
+ * src/okapi_k3.metric and src/metric.c
+ * by scripts/metric.py on Thu, 31 Aug 2006 23:54:32 GMT.  
  *
  * DO NOT MODIFY THIS FILE, as changes will be lost upon 
  * subsequent regeneration (and this code is repetitive enough 
  * that you probably don't want to anyway).  
- * Go modify src/cosine.metric or src/metric.c instead.  
+ * Go modify src/okapi_k3.metric or src/metric.c instead.  
  * 
- * Comments from cosine.metric:
+ * Comments from okapi_k3.metric:
  *
- * cosine.metric is a functional description in our funny zettair metric
- * language (see metric.py) of how the cosine metric should operate.
+ * okapi_k3.metric is a functional description in our funny zettair metric
+ * language (see metric.py) of how the okapi metric should operate.
  * 
- * This cosine metric is the most basic metric available, in order to
- * provide symmetry and to ensure that the weights are meaningful.
- * Thus, we simply calculate the cosine of the angle between a document
- * and query, where each term is a dimension, and the number of
- * occurrances of that term, slightly mangled with a log, is the distance in
- * that dimension.
- * 
- * This metric should probably only be used when the query really is a
- * document.
+ * The okapi metric is probably best described in
+ * 'A probabalistic model of information retrieval: development and
+ * comparative experiments' parts 1 & 2, by Sparck Jones, Walker and
+ * Robertson, although it was (i believe) first presented in
+ * 'Okapi at TREC-7: Automatic ad hoc, filtering, VLC and interactive track'
+ * by Robertson, Walker, and Beaulieu.
  * 
  * written nml 2005-07-18
  *
@@ -50,7 +47,7 @@
 static enum search_ret pre(struct index *idx, struct query *query, 
   int opts, struct index_search_opt *opt) {
     /* METRIC_PRE */
-    if (docmap_cache(idx->map, docmap_get_cache(idx->map) | DOCMAP_CACHE_WEIGHT) != DOCMAP_OK) return SEARCH_EINVAL;
+    if (docmap_cache(idx->map, docmap_get_cache(idx->map) | DOCMAP_CACHE_WORDS) != DOCMAP_OK) return SEARCH_EINVAL;
 
     return SEARCH_OK;
 }
@@ -59,13 +56,10 @@ static enum search_ret post(struct index *idx, struct query *query,
   struct search_acc_cons *acc, int opts, struct index_search_opt *opt) {
     /* METRIC_POST */
 
-    const float Q_weight = search_qweight(query);
-
 
     while (acc) {
         assert(acc->acc.docno < docmap_entries(idx->map));
         /* METRIC_POST_PER_DOC */
-        (acc->acc.weight) /= (float) ((DOCMAP_GET_WEIGHT(idx->map, acc->acc.docno)) * Q_weight);
 
         acc = acc->next;
     }
@@ -127,8 +121,26 @@ static enum search_ret or_decode(struct index *idx, struct query *query,
     enum search_ret ret;
     /* METRIC_DECL */
 
+    const unsigned int N = docmap_entries(idx->map);
+    double avg_D_terms;
+    float w_t;
+    float r_dt;
+
+    float r_qt = (((opt->u.okapi_k3.k3) + 1) * (query->term[qterm].f_qt)) / ((opt->u.okapi_k3.k3) + (query->term[qterm].f_qt));
+    if (docmap_avg_words(idx->map, &avg_D_terms) != DOCMAP_OK) {
+        return SEARCH_EINVAL;
+    }
+
 
     /* METRIC_PER_CALL */
+    w_t = (float) logf((N - (query->term[qterm].f_t) + 0.5F) / ((query->term[qterm].f_t) + 0.5F));
+    /* fix for okapi bug, w_t shouldn't be 0 or negative. */
+    if (w_t <= 0.0F) {
+        /* use a very small increment instead */
+        w_t = FLT_EPSILON;
+    }
+    
+    
 
 
     while (1) {
@@ -143,7 +155,8 @@ static enum search_ret or_decode(struct index *idx, struct query *query,
 
             if (acc && (docno == acc->acc.docno)) {
                 /* METRIC_PER_DOC */
-                (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+                r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (DOCMAP_GET_WORDS(idx->map, acc->acc.docno))) / (float) avg_D_terms)) + f_dt));
+                (acc->acc.weight) += r_dt * w_t * r_qt;
 
             } else {
                 struct search_acc_cons *newacc;
@@ -158,7 +171,8 @@ static enum search_ret or_decode(struct index *idx, struct query *query,
                 acc->acc.docno = docno;
                 acc->acc.weight = 0.0;
                 /* METRIC_PER_DOC */
-                (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+                r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (DOCMAP_GET_WORDS(idx->map, acc->acc.docno))) / (float) avg_D_terms)) + f_dt));
+                (acc->acc.weight) += r_dt * w_t * r_qt;
 
                 *prevptr = newacc;
                 accs_added++;
@@ -209,8 +223,26 @@ static enum search_ret and_decode(struct index *idx, struct query *query,
                                     * accumulators */
     /* METRIC_DECL */
 
+    const unsigned int N = docmap_entries(idx->map);
+    double avg_D_terms;
+    float w_t;
+    float r_dt;
+
+    float r_qt = (((opt->u.okapi_k3.k3) + 1) * (query->term[qterm].f_qt)) / ((opt->u.okapi_k3.k3) + (query->term[qterm].f_qt));
+    if (docmap_avg_words(idx->map, &avg_D_terms) != DOCMAP_OK) {
+        return SEARCH_EINVAL;
+    }
+
 
     /* METRIC_PER_CALL */
+    w_t = (float) logf((N - (query->term[qterm].f_t) + 0.5F) / ((query->term[qterm].f_t) + 0.5F));
+    /* fix for okapi bug, w_t shouldn't be 0 or negative. */
+    if (w_t <= 0.0F) {
+        /* use a very small increment instead */
+        w_t = FLT_EPSILON;
+    }
+    
+    
 
 
     while (1) {
@@ -225,7 +257,8 @@ static enum search_ret and_decode(struct index *idx, struct query *query,
 
             if (acc && (docno == acc->acc.docno)) {
                 /* METRIC_PER_DOC */
-                (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+                r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (DOCMAP_GET_WORDS(idx->map, acc->acc.docno))) / (float) avg_D_terms)) + f_dt));
+                (acc->acc.weight) += r_dt * w_t * r_qt;
 
 
                 /* go to next accumulator */
@@ -320,8 +353,26 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
     float cooc_rate;
     /* METRIC_DECL */
 
+    const unsigned int N = docmap_entries(idx->map);
+    double avg_D_terms;
+    float w_t;
+    float r_dt;
+
+    float r_qt = (((opt->u.okapi_k3.k3) + 1) * (query->term[qterm].f_qt)) / ((opt->u.okapi_k3.k3) + (query->term[qterm].f_qt));
+    if (docmap_avg_words(idx->map, &avg_D_terms) != DOCMAP_OK) {
+        return SEARCH_EINVAL;
+    }
+
 
     /* METRIC_PER_CALL */
+    w_t = (float) logf((N - (query->term[qterm].f_t) + 0.5F) / ((query->term[qterm].f_t) + 0.5F));
+    /* fix for okapi bug, w_t shouldn't be 0 or negative. */
+    if (w_t <= 0.0F) {
+        /* use a very small increment instead */
+        w_t = FLT_EPSILON;
+    }
+    
+    
 
 
     rethresh_dist = rethresh = (postings + results->acc_limit - 1) 
@@ -362,7 +413,8 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
         acc->acc.weight = 0.0;
         f_dt = thresh;
         /* METRIC_CONTRIB */
-        (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+        r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (((float) avg_D_terms))) / (float) avg_D_terms)) + f_dt));
+        (acc->acc.weight) += r_dt * w_t * r_qt;
 
         results->v_t = acc->acc.weight;
 
@@ -384,7 +436,8 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
             acc->acc.weight = 0.0;
             f_dt++;
             /* METRIC_CONTRIB */
-            (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+            r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (((float) avg_D_terms))) / (float) avg_D_terms)) + f_dt));
+            (acc->acc.weight) += r_dt * w_t * r_qt;
 
         } while (acc->acc.weight < results->v_t && f_dt < INF);
         thresh = f_dt; 
@@ -424,7 +477,8 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
 
             if (acc && (docno == acc->acc.docno)) {
                 /* METRIC_PER_DOC */
-                (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+                r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (DOCMAP_GET_WORDS(idx->map, acc->acc.docno))) / (float) avg_D_terms)) + f_dt));
+                (acc->acc.weight) += r_dt * w_t * r_qt;
 
 
                 if (acc->acc.weight < results->v_t) {
@@ -455,7 +509,8 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
                          * otherwise we end up with nonsense in some 
                          * accumulators */
                         /* METRIC_PER_DOC */
-                        (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+                        r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (DOCMAP_GET_WORDS(idx->map, acc->acc.docno))) / (float) avg_D_terms)) + f_dt));
+                        (acc->acc.weight) += r_dt * w_t * r_qt;
 
                         *prevptr = newacc;
                         results->accs++;
@@ -504,7 +559,8 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
                         acc->acc.docno = UINT_MAX;   /* shouldn't be used */
                         acc->acc.weight = 0.0;
                         /* METRIC_CONTRIB */
-                        (acc->acc.weight) += (1 + (float) logf((query->term[qterm].f_qt))) * (1 + (float) logf(f_dt));
+                        r_dt = ((((opt->u.okapi_k3.k1) + 1) * f_dt)       / ((opt->u.okapi_k3.k1) * ((1 - (opt->u.okapi_k3.b)) + (((opt->u.okapi_k3.b) * (((float) avg_D_terms))) / (float) avg_D_terms)) + f_dt));
+                        (acc->acc.weight) += r_dt * w_t * r_qt;
 
                         results->v_t = acc->acc.weight;
                         acc = *prevptr;
@@ -582,9 +638,9 @@ static enum search_ret thresh_decode(struct index *idx, struct query *query,
 
 /* Declare a function named the same as the metric that returns a structure 
  * containing function pointers */
-const struct search_metric * /* METRIC_NAME */ cosine () {
+const struct search_metric * /* METRIC_NAME */ okapi_k3 () {
     const static struct search_metric sm 
-      = {pre, /* METRIC_DEPENDS_POST */ 1 ? post : NULL, 
+      = {pre, /* METRIC_DEPENDS_POST */ 0 ? post : NULL, 
          or_decode, and_decode, thresh_decode};
     return &sm;
 }

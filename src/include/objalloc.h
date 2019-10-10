@@ -78,13 +78,13 @@ int objalloc_is_managed(struct objalloc *alloc, void *ptr);
 unsigned int objalloc_objsize(struct objalloc *obj);
 
 /* overhead on first block allocated */
-unsigned int objalloc_overhead_first(void);
+unsigned int objalloc_overhead_first();
 
 /* overhead on blocks after first allocated */
-unsigned int objalloc_overhead(void);
+unsigned int objalloc_overhead();
 
 /* returns the amount of memory held by the allocator */
-unsigned int objalloc_memsize(struct objalloc *obj, void *ptr);
+unsigned int objalloc_memsize();
 
 #ifdef __cplusplus
 }

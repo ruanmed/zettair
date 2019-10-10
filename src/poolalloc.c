@@ -18,6 +18,7 @@
 #include "zvalgrind.h"
 
 #include <assert.h>
+#include <stdlib.h>
 
 struct poolalloc_chunk {
     struct poolalloc_chunk *next;   /* pointer to next chunk in linked list */
@@ -342,11 +343,11 @@ unsigned int poolalloc_pages(struct poolalloc *pool) {
     return pages;
 }
 
-unsigned int poolalloc_overhead_first(void) {
+unsigned int poolalloc_overhead_first(struct poolalloc *pool) {
     return sizeof(struct poolalloc);
 }
 
-unsigned int poolalloc_overhead(void) {
+unsigned int poolalloc_overhead(struct poolalloc *pool) {
     return sizeof(struct poolalloc_chunk);
 }
 
@@ -354,7 +355,7 @@ unsigned int poolalloc_overhead(void) {
 
 #include <stdlib.h>
 
-int main(void) {
+int main() {
     unsigned int i;
     int *arr[20];
     struct poolalloc *alloc;

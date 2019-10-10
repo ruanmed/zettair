@@ -10,22 +10,20 @@
 #ifndef METRIC_H
 #define METRIC_H
 
-struct search_metric;
-
 /* okapi metric */
-const struct search_metric *okapi(struct search_metric *sm, int offsets);
+const struct search_metric *okapi_k3();
 
 /* dirichlet metric */
-const struct search_metric *dirichlet(struct search_metric *sm, int offsets);
+const struct search_metric *dirichlet();
 
 /* pivoted cosine metric */
-const struct search_metric *pcosine(struct search_metric *sm, int offsets);
+const struct search_metric *pcosine();
 
 /* (incredibly simple) cosine metric */
-const struct search_metric *cosine(struct search_metric *sm, int offsets);
+const struct search_metric *cosine();
 
 /* Dave Hawking's AF1 metric */
-const struct search_metric *hawkapi(struct search_metric *sm, int offsets);
+const struct search_metric *hawkapi();
 
 #endif
 

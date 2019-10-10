@@ -14,6 +14,8 @@
  *
  */
 
+#include "firstinclude.h"
+
 #include "rbtree.h"
 
 #include "def.h"
@@ -351,7 +353,7 @@ enum rbtree_ret rbtree_invariant(const struct rbtree *rb) {
 
 /* generic operations */
 
-static struct rbtree *rbtree_new(void) {
+static struct rbtree *rbtree_new() {
     struct rbtree *rb;
 
     if ((rb = malloc(sizeof(*rb))) 

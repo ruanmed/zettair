@@ -28,7 +28,7 @@ enum reposset_ret {
 
 struct reposset;
 
-struct reposset *reposset_new(void);
+struct reposset *reposset_new();
 void reposset_delete(struct reposset *rset);
 
 /* add a new repository.  reposno will contain the number assigned to this

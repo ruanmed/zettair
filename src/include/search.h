@@ -1,4 +1,5 @@
-/* search.h declares the internal details of how searching works.
+/* _search.h declares the internal details of how searching works.
+ * Not much in here at the moment.
  *
  * written nml 2005-05-11
  *
@@ -54,8 +55,8 @@ struct search_list_src {
      * the reader simplifies things in the face of different buffer sources,
      * since the source can either adjust the existing buffer or read the extra
      * few bytes again. */
-    enum search_ret (*read)(struct search_list_src *src, unsigned int leftover, 
-      void **retbuf, unsigned int *retlen);
+    enum search_ret (*readlist)(struct search_list_src *src, 
+      unsigned int leftover, void **retbuf, unsigned int *retlen);
     /* method to delete the src structure and free all resources used by it */
     void (*delet)(struct search_list_src *src);
 };
@@ -120,13 +121,6 @@ struct search_metric {
       struct search_metric_results *results, 
       struct search_list_src *src, unsigned int postings, 
       int opts, struct index_search_opt *opt);
-
-    /* the name of the metric */
-    const char *name;
-
-    /* a function to parse a text string describing the parameters for the
-     * metric into the metric structure */
-    enum search_ret (*parse_params)(void *param, const char *str);
 };
 
 /* constant to pass as start_docno when decoding from the start of a list */
@@ -138,8 +132,8 @@ unsigned int search_qterms(struct query *q);
 /* function to return the cosine weight of a query structure */
 float search_qweight(struct query *q);
 
-struct alloc;
-struct term;
+#include "alloc.h"
+#include "index_querybuild.h"
 
 /* function to return a list source for a given term (FIXME: move to a different
  * module) */

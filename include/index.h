@@ -48,6 +48,10 @@ enum index_stem {
 /* options to be passed to index_new */
 enum index_new_opts {
     INDEX_NEW_NOOPT = 0,            /* pass this to indicate no options */
+    INDEX_NEW_VOCAB = (1 << 0),     /* option to create an index with postings 
+                                     * of size less than the size you specify 
+                                     * (as an unsigned int) in the 
+                                     * vocabulary */
     INDEX_NEW_STEM = (1 << 4),      /* use stemming algorithm (passed as 
                                      * stemmer) to stem the index */
     INDEX_NEW_MAXFILESIZE           /* set maximum filesize created */
@@ -63,15 +67,13 @@ enum index_new_opts {
                                      * stoplist) */
     INDEX_NEW_TABLESIZE = (1 << 9), /* dictate how large the postings 
                                      * hashtable is */
-    INDEX_NEW_PARSEBUF = (1 << 10), /* dictate how large the postings 
+    INDEX_NEW_PARSEBUF = (1 << 10)  /* dictate how large the postings 
                                      * hashtable is */
-    INDEX_NEW_NO_OFFSETS = (1 << 12),/*build the index without offsets */
-    INDEX_NEW_QTHREADS = (1 << 13)  /* number of simultaneous query threads to 
-                                     * allow is supplied */
 };
 
 /* XXX: comment me */
 struct index_new_opt {
+    unsigned int vocab_size;
     enum index_stem stemmer;        /* stemming algorithm used */
     const char *stop_file;
     unsigned long int maxfilesize;
@@ -79,7 +81,6 @@ struct index_new_opt {
     unsigned int tablesize;
     unsigned int parsebuf;
     const char *qstop_file;
-    unsigned int qthreads;
 };
 
 /* create a new, empty index.  config can now be NULL if default compile-time 
@@ -90,6 +91,14 @@ struct index *index_new(const char *name, const char *config,
 /* options to be passed to index_load */
 enum index_load_opts {
     INDEX_LOAD_NOOPT = 0,           /* pass this to indicate no options */
+    INDEX_LOAD_VOCAB = (1 << 0),    /* option to load index with updates of 
+                                     * postings of size less than the size you 
+                                     * specify (as an unsigned int) in the 
+                                     * vocabulary */
+    INDEX_LOAD_MAXFLIST = (1 << 2), /* option to load index, with updates to 
+                                     * lists greater than the unsigned int you 
+                                     * specify causing the creation of a new 
+                                     * inverted list */
     INDEX_LOAD_IGNORE_VERSION = (1 << 5), /* if the index file format
                                       * version doesn't match, warn, but
                                       * try loading the index anyway. */
@@ -100,19 +109,18 @@ enum index_load_opts {
     INDEX_LOAD_QSTOP = (1 << 11),    /* stop at query time, using the file 
                                       * given as qstop_list (or NULL for 
                                       * default stoplist) */
-    INDEX_LOAD_DOCMAP_CACHE = (1 << 12),/* specify which values to cache 
+    INDEX_LOAD_DOCMAP_CACHE = (1 << 12)  /* specify which values to cache 
                                       * in-memory when the docmap loads */
-    INDEX_LOAD_QTHREADS = (1 << 13)  /* number of simultaneous query threads 
-                                      * to allow is supplied */
 };
 
 /* XXX: comment me */
 struct index_load_opt {
+    unsigned int vocab_size;
+    unsigned int maxflist_size;
     unsigned int tablesize;
     unsigned int parsebuf;
     const char *qstop_file;
     int docmap_cache;
-    unsigned int qthreads;
 };
 
 #define INDEX_MEMORY_UNLIMITED 0    /* Don't limit memory usage */
@@ -129,6 +137,9 @@ int index_rm(struct index *idx);
 
 /* destruct the index object */
 void index_delete(struct index *idx);
+
+/* remove index files then delete the index */
+void index_cleanup(struct index *idx);
 
 /* struct to record statistics about the index */
 struct index_stats {
@@ -229,10 +240,6 @@ enum index_search_opts {
      * Requires impact ordered vectors to have been built previously. */
     INDEX_SEARCH_ANH_IMPACT_RANK = (1 << 10),
 
-    /* provide a text string describing the ranking to be used, as well as a
-     * text string describing the parameters to be used. */
-    INDEX_SEARCH_DYNAMIC_RANK = (1 << 11),
-
     /* query biased document summary type*/
     INDEX_SEARCH_SUMMARY_TYPE = (1 << 6),
 
@@ -250,7 +257,7 @@ struct index_search_opt {
             float k1;
             float k3;
             float b;
-        } okapi;
+        } okapi_k3;
 
         struct {
             float pivot;
@@ -264,11 +271,6 @@ struct index_search_opt {
             float alpha;
             float k3;
         } hawkapi;
-
-        struct {
-            const char *metric;
-            const char *params;
-        } dynamic;
     } u;
 
     unsigned int word_limit;

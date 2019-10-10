@@ -14,6 +14,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <math.h>
 #include <string.h>
 
 /* internal array of the maximum number that will fit in each vbyte byte */

@@ -36,7 +36,7 @@ int tu_sample_data_inited = 0;
 
 static int tu_sample_data_pos = 0;
 
-void tu_sample_data_rand_init(void) {
+void tu_sample_data_rand_init() {
     unsigned i;
     for (i = 0; i < TU_SAMPLE_DATA_LEN; i++) {
         tu_sample_data[i] = tu_rand_limit(256u);
@@ -48,7 +48,7 @@ int tu_sample_data_file_init(const char * fname) {
     int fd;
     unsigned total_read = 0;
     int nread;
-    fd = open(fname, O_RDONLY | O_BINARY);
+    fd = open(fname, O_RDONLY);
     if (fd < 0) {
         ERROR1("opening '%s' for sample data", fname);
         return 0;

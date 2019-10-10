@@ -412,7 +412,7 @@ int test_file(FILE *fp, int argc, char **argv) {
 
             /* read parameters */
             if ((fscanf(fp, "%255s", name) == 1)
-              && (rbtree = rbtree_luint_new())) {
+              && (rbtree = rbtree_luint_new(luintcmp))) {
                 /* succeeded, do nothing */
                 if (params.verbose) {
                     printf("%s: new rbtree\n", name);

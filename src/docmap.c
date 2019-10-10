@@ -509,7 +509,6 @@ static enum docmap_ret commit(struct docmap *dm, struct docmap_buffer *buf) {
         if (offset + target > dm->file_pages) {
             target = dm->file_pages - offset;
             assert(target);
-            assert(target <= pages);
         }
 
         VALGRIND_CHECK_READABLE(pos, target * pagesize);
@@ -1982,7 +1981,6 @@ struct docmap *docmap_load(struct fdset *fdset,
     max_filesize = dm->file_pages * dm->pagesize;
 
 #define FAIL(retval)                                                          \
-    assert(!CRASH);                                                           \
     if (fd >= 0) {                                                            \
         fdset_unpin(fdset, fd_type, fileno, fd);                              \
     }                                                                         \

@@ -21,6 +21,7 @@ struct term {
     struct term *next;                    /* linked list of terms */
     struct vocab_vector vocab;            /* vocab term */
     char *term;                           /* term text */
+    char *vecmem;                         /* pointer to vector for this word */
 };
 
 /* types of conjunction (in priority order) */

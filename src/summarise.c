@@ -645,7 +645,7 @@ enum summarise_ret summarise(struct summarise *sum, unsigned long int docno,
           curroffset,
           physoffset;
     int finished = 0;                     /* continued iteration indicator */
-    enum docmap_ret dmret = DOCMAP_ARG_ERROR;
+    enum docmap_ret dmret;
     enum docmap_flag dmflags;
     enum mime_types mtype;
     struct stream_filter *filter;
@@ -655,14 +655,8 @@ enum summarise_ret summarise(struct summarise *sum, unsigned long int docno,
     }
 
     /* find document, and reinitialise parser with fd for it */
-    if (zpthread_mutex_lock(&sum->idx->docmap_mutex) == ZPTHREAD_OK
-      && (dmret = docmap_get_location(sum->map, docno, &fileno, &offset, 
-        &bytes, &mtype, &dmflags)), 
-
-        /* unconditionally unlock mutex, before we test return value */
-        zpthread_mutex_unlock(&sum->idx->docmap_mutex), 
-
-        (dmret == DOCMAP_OK)) {
+    if (((dmret = docmap_get_location(sum->map, docno, &fileno, &offset, 
+        &bytes, &mtype, &dmflags)) == DOCMAP_OK)) {
 
         mlparse_reinit(&sum->parser);
         if (dmflags & DOCMAP_COMPRESSED) {
@@ -696,10 +690,6 @@ enum summarise_ret summarise(struct summarise *sum, unsigned long int docno,
                 }
             }
         } else {
-            if (sum->last_stream) {
-                stream_delete(sum->last_stream);
-            }
-
             /* read from a regular file */
             if ((sum->last_stream = stream_new())) {
                 sum->last_fileno = fileno;
